@@ -4,7 +4,7 @@ const orderItemSchema = mongoose.Schema({
     productId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
-        reqyired: true,
+        required: true,
     },
     name: {
         type: String,
@@ -37,7 +37,7 @@ const orderSchema = mongoose.Schema({
         },
         status: {
             type: String,
-            enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+            enum: ["pending", "processing", "paid", "completed", "cancelled"],
             default: "pending",
         },
         shippingAddress: {

@@ -14,7 +14,7 @@ const categorySchema = mongoose.Schema(
     categoryType: {
         type: String,
         required: true,
-        enum: ["Featured", "Hot Categories", "Special Offers"],
+        enum: ["Featured", "Hot Categories", "Top Categories"],
 },
 },
 {

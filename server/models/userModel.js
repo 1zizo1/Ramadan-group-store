@@ -15,9 +15,9 @@ const userSchema = mongoose.Schema({
         type: String,
         required: true
     },
-    avartar: {
+    avatar: {
         type: String,
-        default: "default-avatar.png"
+        default: "https://res.cloudinary.com/dlbqw7atu/image/upload/V1747734054/userImage_dhytay.png"
     },
     role: {
         type: String,
@@ -94,16 +94,19 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 
 // Ensure only one address is default
 userSchema.pre("save", function (next) {
-    const defaultAddresses = this.addresses.filter(addr => addr.
-        isDefault);
-    if (defaultAddresses) {
-        this.addresses.forEach((addr) => {
-           if (addr !== defaultAddresses) addr.isDefault = false;
+    const defaultAddresses = this.addresses.filter(addr => addr.isDefault);
+
+    if (defaultAddresses.length > 1) {
+        // خليه آخر واحد اتحط default
+        const lastDefault = defaultAddresses[defaultAddresses.length - 1];
+
+        this.addresses.forEach(addr => {
+            addr.isDefault = addr === lastDefault;
         });
     }
+
     next();
 });
-
 const User = mongoose.model("User", userSchema);
 
 export default User;

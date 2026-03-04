@@ -98,12 +98,177 @@ const deleteUser = asyncHandler(async (req, res) => {
         await user.deleteOne()
         res.status(200).json({
             success: "success",
-            message:"User deleted successfully!",
+            message: "User deleted successfully!",
         })
     } else {
         res.status(404);
         throw new Error("  user not found")
     }
 })
+// @desc    Add address to user profile
+// @route   POST /api/users/:id/addresses
+// @access  Private
+const addAddress = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
 
-export { getUsers, createUser, getUserById, updateUser, deleteUser }
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found");
+    }
+
+    // Authorization
+    if (req.user._id.toString() !== user._id.toString() && req.user.role !== "admin") {
+        res.status(403);
+        throw new Error("Not authorized");
+    }
+
+    const { street, city, country, postalCode, isDefault } = req.body;
+
+    if (!street || !city || !country || !postalCode) {
+        res.status(400);
+        throw new Error("All address fields are required");
+    }
+    // --- 1. ERROR ON DUPLICATE DATA ---
+    // Check if address already exist in the user's addresses
+    const isDuplicate = user.addresses.some(addr =>
+        addr.street.toLowerCase().trim() === street.toLowerCase().trim() &&
+        addr.postalCode.toString().trim() === postalCode.toString().trim() &&
+        addr.city.toLowerCase().trim() === city.toLowerCase().trim() &&
+        addr.country.toString().trim() === country.toString().trim()
+    );
+
+    if (isDuplicate) {
+        res.status(400);
+        throw new Error("This address already exists in your profile");
+    }
+
+    // --- 2. STRICT BOOLEAN LOGIC ---
+    // Convert input to a real boolean (handles "true", true, or undefined)
+
+    // If this is set as default, make other addresses non-default
+    if (isDefault) {
+        user.addresses.forEach((addr) => {
+            addr.isDefault = false;
+        });
+    }
+
+    // If this is the first address, set as default
+    if (user.addresses.length === 0) {
+        user.addresses.push({
+            street,
+            city,
+            country,
+            postalCode,
+            isDefault : true
+        })
+    } else {
+       user.addresses.push({
+            street,
+            city,
+            country,
+            postalCode,
+            isDefault : isDefault || false
+        })
+    }
+
+    await user.save();
+console.log(typeof(isDefault), req.body);
+console.log(user.addresses);
+
+    res.json({
+        success: true,
+        addresses: user.addresses,
+        message: "Address added successfully",
+        
+    });
+});
+// update address
+// @desc    Update user address
+// @route   PUT /api/users/:id/addresses/:addressId
+// @access  Private
+const updateAddress = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found");
+    }
+
+    // Only allow user to modify their own addresses or admin
+    if (req.user._id.toString() !== user._id.toString() && req.user.role !== "admin") {
+        res.status(403);
+        throw new Error("Not authorized to modify this user's addresses");
+    }
+
+    const address = user.addresses.id(req.params.addressId);
+
+    if (!address) {
+        res.status(404);
+        throw new Error("Address not found");
+    }
+
+    const { street, city, country, postalCode, isDefault } = req.body;
+
+    if (street) address.street = street;
+    if (city) address.city = city;
+    if (country) address.country = country;
+    if (postalCode) address.postalCode = postalCode;
+
+    // If this is set as default, make other addresses non-default
+    if (isDefault) {
+        user.addresses.forEach((addr) => {
+            addr.isDefault = false;
+        });
+        address.isDefault = true;
+    }
+
+    await user.save();
+
+    res.json({
+        success: true,
+        addresses: user.addresses,
+        message: "Address updated successfully",
+    });
+});
+
+// @desc    Delete user address
+// @route   DELETE /api/users/:id/addresses/:addressId
+// @access  Private
+const deleteAddress = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found");
+    }
+
+    // Only allow user to modify their own addresses or admin
+    if (req.user._id.toString() !== user._id.toString() && req.user.role !== "admin") {
+        res.status(403);
+        throw new Error("Not authorized to modify this user's addresses");
+    }
+
+    const address = user.addresses.id(req.params.addressId);
+
+    if (!address) {
+        res.status(404);
+        throw new Error("Address not found");
+    }
+
+    // If deleting default address, make the first remaining address default
+    const wasDefault = address.isDefault;
+    user.addresses.pull(req.params.addressId);
+
+    if (wasDefault && user.addresses.length > 0) {
+        user.addresses[0].isDefault = true;
+    }
+
+    await user.save();
+
+    res.json({
+        success: true,
+        addresses: user.addresses,
+        message: "Address deleted successfully",
+    });
+});
+export { getUsers, createUser, getUserById, updateUser, deleteUser, addAddress, updateAddress, deleteAddress }
