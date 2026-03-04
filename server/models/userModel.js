@@ -1,86 +1,109 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs"
+import bcrypt from "bcryptjs";
+
 const userSchema = mongoose.Schema({
     name: {
         type: String,
-        required: true,
+        required: true
     },
     email: {
         type: String,
         required: true,
-        unique: true,
+        unique: true 
     },
     password: {
         type: String,
-        required: true,
+        required: true
     },
-    avatar: {
+    avartar: {
         type: String,
-        default: "https://res.cloudinary.com/dlbqw7atu/image/upload/V1747734054/userImage_dhytay.png",
+        default: "default-avatar.png"
     },
     role: {
         type: String,
-        enum: ["admin", "user", "deliveryman"],
-        default: "user",
+        enum: ["admin", "user", "deliveryman" ],
+        default: "user"
+    }, 
+    addresses: [{
+        street: {
+            type: String,
+            required: true,
+        },
+        city: { 
+            type: String,
+            required: true,
+        },
+        country: {
+            type: String,
+            required: true,
+        },
+        postalCode: {
+            type: String,
+            required: true,
+        },
+        isDefault: {
+            type: Boolean,
+            default: false,
+        },
     },
-    addresses: [
+],
+    //whishlist
+    whishlist:[
         {
-            street: {
-                type: String,
-                required: true,
-            },
-            city: {
-                type: String,
-                required: true,
-            },
-            country: {
-                type: String,
-                required: true,
-            },
-            postalCode: {
-                type: String,
-                required: true,
-            },
-            isDefault: {
-                type: Boolean,
-                default: false,
-            },
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+            
         },
     ],
-    //wishlist
     //cart
-    //order
+    cart:[
+        {
+            product: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Product",
+                required: true,
+            },
+            quantity: {
+                type: Number,
+                required: true,
+                min: 1,
+            },
+        }
+    ],
+    //oder
 },
-    {
-        timetamps: true,
-    }
-);
+{ 
+    timestamps: true,
+ }
+); 
 
-// Match user password to hashed in the database 
-userSchema.methods.matchPassword = async function (enteredPassword) {
+//match user entered password to hashed password in database
+userSchema.methods.matchPassword = async function (enteredPassword) {   
     return await bcrypt.compare(enteredPassword, this.password);
-}
-//encrypt password using bcrybt 
-userSchema.pre("save", async function (next) {
+};
+
+// Encrypt password using bcrypt
+ userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) {
         next();
     }
-    const salt =await bcrypt.genSalt(10)
-    this.password = await bcrypt.hash(this.password, salt)
-})
-//ensure only one address is defult 
-userSchema.pre("save", async function (next) {
-    if (this.isModified("addresses")) {
-        const defultAddress = this.addresses.find((addr) => addr.isDefault)
-        if (defultAddress) {
-            this.addresses.forEach((addr) => {
-                if (addr !== defultAddress) addr.isDefault = false;
-            });
-        }
+    // Encrypt password using bcrypt
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+}); 
+
+// Ensure only one address is default
+userSchema.pre("save", function (next) {
+    const defaultAddresses = this.addresses.filter(addr => addr.
+        isDefault);
+    if (defaultAddresses) {
+        this.addresses.forEach((addr) => {
+           if (addr !== defaultAddresses) addr.isDefault = false;
+        });
     }
-    next()
-})
+    next();
+});
 
+const User = mongoose.model("User", userSchema);
 
-const User = mongoose.model("user", userSchema)
 export default User;
