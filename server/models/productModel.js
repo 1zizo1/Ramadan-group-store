@@ -48,7 +48,7 @@ const productSchema = new mongoose.Schema({
     ],
     avarageRating: {
         type: Number,
-        required: true,
+    
     },
     category: {  // Note: uppercase C
         type: mongoose.Schema.Types.ObjectId,
@@ -77,6 +77,6 @@ productSchema.pre("save", function (next) {
     }
     next();
 })
-const product = mongoose.model("Product", productSchema);
+const Product = mongoose.model("Product", productSchema);
 
-export default product;
+export default Product;

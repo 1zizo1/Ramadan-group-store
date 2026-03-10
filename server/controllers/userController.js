@@ -170,11 +170,7 @@ const addAddress = asyncHandler(async (req, res) => {
             isDefault : isDefault || false
         })
     }
-
     await user.save();
-console.log(typeof(isDefault), req.body);
-console.log(user.addresses);
-
     res.json({
         success: true,
         addresses: user.addresses,

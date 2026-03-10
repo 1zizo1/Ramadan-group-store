@@ -7,6 +7,12 @@ import connectDB from "./config/db.js";
 //route imorts
 import authRoutes from "./route/authRoutes.js"
 import userRoutes from "./route/userRoutes.js"
+import brandRoutes from "./route/brandRoutes.js"
+import categoreyRoutes from "./route/categoryRoutes.js"
+import productRoutes from "./route/productRoutes.js"
+import bannerRoutes from "./routes/bannerRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js"
 import swaggerUI from "swagger-ui-express"
 import {specs} from "./config/swagger.js"
 // Load env vars
@@ -63,6 +69,22 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 // Routes
 app.use("/api/auth", authRoutes)
 app.use("/api/users", userRoutes)
+app.use("/api/brands", brandRoutes)
+app.use("/api/categories", categoreyRoutes)
+app.use("/api/products", productRoutes)
+app.use("/api/banners", bannerRoutes);
+//stats
+app.use("/api/stats", statsRoutes);
+// orderRoutes
+app.use("/api/orders", orderRoutes);
+// cartRoutes
+// app.use("/api/cart", cartRoutes);
+//wishlist
+// app.use("/api/wishlist", wishlistRoutes);
+// analyticsRoutes
+// app.use("/api/analytics", analyticsRoutes);
+// paymentRoutes
+// app.use("/api/payments", paymentRoutes);
 
 // API Documentation
 app.use("/api/docs",
