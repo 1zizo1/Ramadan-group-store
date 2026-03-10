@@ -1,7 +1,7 @@
 // cartController.js
 import asyncHandler from "express-async-handler";
-import Cart from "../models/Cart.js";
-import Product from "../models/Product.js";
+import Cart from "../models/cartModel.js";
+import Product from "../models/ProductModel.js";
 
 // @desc    Get user's cart
 // @route   GET /api/cart

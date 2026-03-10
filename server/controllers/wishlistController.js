@@ -264,34 +264,39 @@ export const getWishlistProducts = async (req, res) => {
         const endIndex = startIndex + parseInt(limit);
         const paginatedItems = items.slice(startIndex, endIndex);
 
-        // Transform data for frontend
-        const transformedItems = paginatedItems.map(item => {
-            const product = item.product;
-            const originalPrice = product.price || 0;
-            const discount = product.discount || 0;
-            const discountedPrice = discount > 0 
-                ? originalPrice * (1 - discount / 100) 
-                : originalPrice;
+// Replace the transformation logic inside getWishlistProducts with this:
 
-            return {
-                _id: item._id,
-                product: {
-                    _id: product._id,
-                    name: product.name || 'Unknown Product',
-                    price: originalPrice,
-                    discountedPrice: discountedPrice,
-                    discount: discount,
-                    image: product.image || '/images/default-product.png',
-                    stock: product.stock || 0,
-                    category: product.category?.name || 'Uncategorized',
-                    brand: product.brand?.name || 'No Brand',
-                    rating: product.rating || 0,
-                    numReviews: product.numReviews || 0,
-                    isOutOfStock: (product.stock || 0) <= 0
-                },
-                addedAt: item.addedAt
-            };
-        });
+const transformedItems = paginatedItems.map(item => {
+    const product = item.product;
+    const originalPrice = product.price || 0;
+    
+    // MATCHING YOUR MODEL: discountPercentage instead of discount
+    const discount = product.discountPercentage || 0; 
+    
+    const discountedPrice = discount > 0 
+        ? originalPrice * (1 - discount / 100) 
+        : originalPrice;
+
+    return {
+        _id: item._id,
+        product: {
+            _id: product._id,
+            name: product.name || 'Unknown Product',
+            price: originalPrice,
+            discountedPrice: discountedPrice,
+            discountPercentage: discount, // Updated name
+            image: product.image || '/images/default-product.png',
+            stock: product.stock || 0,
+            category: product.category?.name || 'Uncategorized',
+            brand: product.brand?.name || 'No Brand',
+            // MATCHING YOUR MODEL: avarageRating and ratings.length
+            rating: product.avarageRating || 0, 
+            numReviews: product.ratings ? product.ratings.length : 0,
+            isOutOfStock: (product.stock || 0) <= 0
+        },
+        addedAt: item.addedAt
+    };
+});
 
         res.status(200).json({
             success: true,

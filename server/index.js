@@ -4,15 +4,19 @@ import { errorHandler } from "./middleware/errorMiddleware.js";
 import cors from "cors";
 import connectDB from "./config/db.js";
 
-//route imorts
-import authRoutes from "./route/authRoutes.js"
-import userRoutes from "./route/userRoutes.js"
-import brandRoutes from "./route/brandRoutes.js"
-import categoreyRoutes from "./route/categoryRoutes.js"
-import productRoutes from "./route/productRoutes.js"
+//route imports
+import authRoutes from "./routes/authRoutes.js"
+import userRoutes from "./routes/userRoutes.js"
+import brandRoutes from "./routes/brandRoutes.js"
+import categoreyRoutes from "./routes/categoryRoutes.js"
+import productRoutes from "./routes/productRoutes.js"
 import bannerRoutes from "./routes/bannerRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
-import orderRoutes from "./routes/orderRoutes.js"
+import orderRoutes from "./routes/orderRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import paymentRoutes from "./routes/paymentRoute.js";
 import swaggerUI from "swagger-ui-express"
 import {specs} from "./config/swagger.js"
 // Load env vars
@@ -78,13 +82,13 @@ app.use("/api/stats", statsRoutes);
 // orderRoutes
 app.use("/api/orders", orderRoutes);
 // cartRoutes
-// app.use("/api/cart", cartRoutes);
+app.use("/api/cart", cartRoutes);
 //wishlist
-// app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 // analyticsRoutes
-// app.use("/api/analytics", analyticsRoutes);
+app.use("/api/analytics", analyticsRoutes);
 // paymentRoutes
-// app.use("/api/payments", paymentRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // API Documentation
 app.use("/api/docs",

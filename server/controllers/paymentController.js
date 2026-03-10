@@ -8,7 +8,7 @@ import Cart from "../models/cartModel.js";
 dotenv.config();
 
 // Initialize Stripe with secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY|| "123" );
 
 // @desc    Create a payment intent
 // @route   POST /api/payment/create-intent
