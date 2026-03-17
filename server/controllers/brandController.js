@@ -7,6 +7,7 @@ import cloudinary from "../config/cloudinary.js"; // Make sure to import cloudin
 // @access  Public
 const getBrands = asyncHandler(async (req, res) => {
     const brands = await Brand.find({});
+    console.log("RAW DATA FROM DATABASE:", brands); // <--- ADD THIS
     res.json(brands);
 });
 

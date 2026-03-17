@@ -9,8 +9,8 @@ const bannerSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    startForm : {
-        type: Date,
+    startFrom : {
+        type: Number,
         required: true,
     },
     image: {

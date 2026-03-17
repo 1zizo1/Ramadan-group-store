@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/userModel.js';
+import cloudinary from '../config/cloudinary.js';
 //get users 
 const getUsers = asyncHandler(async (req, res) => {
     const users = await User.find({}).select("-password")
@@ -10,24 +11,43 @@ const getUsers = asyncHandler(async (req, res) => {
 })
 // create users 
 const createUser = asyncHandler(async (req, res) => {
-    const { name, email, password, role, addresses } = req.body
-    const userExists = await User.findOne({ email })
+    const { name, email, password, role, avatar } = req.body;
+
+    const userExists = await User.findOne({ email });
     if (userExists) {
         res.status(400);
-        throw new Error("User already exists, Try login ")
+        throw new Error("User already exists, Try login");
+    }
+
+    let avatarUrl = "";
+
+    // Handle Upload if avatar is provided
+    if (avatar) {
+        try {
+            const result = await cloudinary.uploader.upload(avatar, {
+                folder: "admin-dashboard/avatars",
+            });
+            avatarUrl = result.secure_url;
+        } catch (error) {
+            console.error("Cloudinary Upload Error:", error);
+            res.status(500);
+            throw new Error("Image upload failed");
+        }
+    } else {
+        // Optional: Set a default avatar if none is uploaded
+        avatarUrl = `https://ui-avatars.com/api/?name=${name}&background=random`;
     }
 
     const user = await User.create({
         name,
         email,
         password,
-        role,
+        role: role || "user",
+        avatar: avatarUrl || `https://ui-avatars.com/api/?name=${name}&background=random`,
         addresses: [],
     });
-    if (user) {
-        //init emty cart
-        //await Cart.create(userId:user._id,items:{[]})
 
+    if (user) {
         res.status(201).json({
             _id: user._id,
             name: user.name,
@@ -35,12 +55,12 @@ const createUser = asyncHandler(async (req, res) => {
             avatar: user.avatar,
             role: user.role,
             addresses: user.addresses,
-        })
+        });
     } else {
         res.status(400);
-        throw new Error("invalid user data")
+        throw new Error("Invalid user data");
     }
-})
+});
 //getUserById
 const getUserById = asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id).select("-password")
@@ -71,7 +91,13 @@ const updateUser = asyncHandler(async (req, res) => {
     }
 
     user.addresses = req.body.addresses || user.addresses;
-
+if (req.body.avatar && req.body.avatar !== user.avatar) {
+    const result = await cloudinary.uploader.upload(req.body.avatar, {
+        folder: "admin-dashboard/avatars",
+        
+});
+user.avatar = result.secure_url;
+}
     //avater
     const updatedUser = await user.save();
     res.status(200).json({

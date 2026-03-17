@@ -1,10 +1,11 @@
 import Banner from "../models/bannerModel.js";
-
+import cloudinary from "../config/cloudinary.js";
 export const createBanner = async (req, res) => {
     try {
-        const { name, title, startForm, image, bannerType} = req.body;
+        const { name, title, startFrom, image, bannerType } = req.body;
 
-        if (!name || !title || !startForm || !image ||!bannerType) {
+        // 1. Validation (Check startFrom specifically as it's a number)
+        if (!name || !title || startFrom === undefined || !image || !bannerType) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required"
@@ -19,11 +20,28 @@ export const createBanner = async (req, res) => {
             });
         }
 
+        // 2. Cloudinary Upload Logic
+        let imageUrl = "";
+      try {
+    const result = await cloudinary.uploader.upload(image, {
+        folder: "admin-dashboard/banners",
+    });
+    imageUrl = result.secure_url;
+} catch (uploadError) {
+    console.error("DETAILED CLOUDINARY ERROR:", uploadError); // Check your terminal!
+    return res.status(500).json({ 
+        success: false, 
+        message: "Image upload failed", 
+        debug: uploadError.message // This tells you WHY
+    });
+}
+
+        // 3. Create Database Entry
         const banner = await Banner.create({
             name,
             title,
-            startForm,
-            image,
+            startFrom : new Date(startFrom), // Ensure this is a Date object
+            image: imageUrl,
             bannerType
         });
 
@@ -44,18 +62,13 @@ export const createBanner = async (req, res) => {
 export const getBanners = async (req, res) => {
     try {
         const banners = await Banner.find().sort({ createdAt: -1 });
-
         res.status(200).json({
             success: true,
             count: banners.length,
-            data: banners
+            data: banners // This is what banners.map() looks for
         });
     } catch (error) {
-        console.error("Get banners error:", error);
-        res.status(500).json({
-            success: false,
-            message: error.message || "Server error"
-        });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
@@ -91,72 +104,55 @@ export const getBannerById = async (req, res) => {
 
 export const updateBanner = async (req, res) => {
     try {
-        const { name, title, startForm, image,bannerType } = req.body;
+        const { name, title, startFrom, image, bannerType } = req.body;
 
         let banner = await Banner.findById(req.params.id);
         if (!banner) {
-            return res.status(404).json({
-                success: false,
-                message: "Banner not found"
+            return res.status(404).json({ success: false, message: "Banner not found" });
+        }
+
+        // Handle Image Update
+        let imageUrl = banner.image;
+        // Check if image is a new Base64 string (not a URL)
+        if (image && !image.startsWith("http")) {
+            const result = await cloudinary.uploader.upload(image, {
+                folder: "admin-dashboard/banners",
             });
+            imageUrl = result.secure_url;
         }
 
-        if (name && name !== banner.name) {
-            const existingBanner = await Banner.findOne({ name });
-            if (existingBanner && existingBanner._id.toString() !== req.params.id) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Banner with this name already exists"
-                });
-            }
-        }
+        const updatedData = {
+            name: name || banner.name,
+            title: title || banner.title,
+            startFrom: startFrom !== undefined ? startFrom : banner.startFrom,
+            image: imageUrl,
+            bannerType: bannerType || banner.bannerType
+        };
 
-        banner = await Banner.findByIdAndUpdate(
+        const updatedBanner = await Banner.findByIdAndUpdate(
             req.params.id,
-            { 
-                name: name || banner.name,
-                title: title || banner.title,
-                startForm: startForm || banner.startForm,
-                image: image || banner.image,
-                bannerType: bannerType || banner.bannerType
-            },
-            { 
-                new: true,
-                runValidators: true 
-            }
+            updatedData,
+            { new: true, runValidators: true }
         );
 
         res.status(200).json({
             success: true,
             message: "Banner updated successfully",
-            data: banner
+            data: updatedBanner
         });
     } catch (error) {
         console.error("Update banner error:", error);
-        if (error.kind === 'ObjectId') {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid banner ID format"
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: error.message || "Server error"
-        });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 };
-
 export const deleteBanner = async (req, res) => {
     try {
         const banner = await Banner.findById(req.params.id);
-
         if (!banner) {
-            return res.status(404).json({
-                success: false,
-                message: "Banner not found"
-            });
+            return res.status(404).json({ success: false, message: "Banner not found" });
         }
 
+        // Optional: Add logic here to delete from Cloudinary using banner.image public_id
         await Banner.findByIdAndDelete(req.params.id);
 
         res.status(200).json({
@@ -164,17 +160,7 @@ export const deleteBanner = async (req, res) => {
             message: "Banner deleted successfully"
         });
     } catch (error) {
-        console.error("Delete banner error:", error);
-        if (error.kind === 'ObjectId') {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid banner ID format"
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: error.message || "Server error"
-        });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 };
 

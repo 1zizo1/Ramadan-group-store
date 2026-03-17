@@ -21,7 +21,7 @@ const getCategories = asyncHandler(async (req, res) => {
         throw new Error("Sort order must be 'asc' or 'desc'");
     }
     const skip = (page - 1) * perPage;
-    const total = Category.countDocuments({});
+    const total = await Category.countDocuments({});
     const sortValue = sortOrder === "asc" ? 1 : -1;// 1 for ascending, -1 for descending
 
     const categories = await Category.find({})
@@ -44,15 +44,14 @@ const getCategories = asyncHandler(async (req, res) => {
 // @route   GET /api/categories/type/:type
 // @access  Public
 const getCategoriesByType = asyncHandler(async (req, res) => {
-    const category = await Category.findById(req.params.id);
-
-    // Validate category type
-    if (category) {
-        res.status(400);
-        throw new Error("Category not found");
-    }
+    const { type } = req.params; // Get type from URL
 
     const categories = await Category.find({ categoryType: type });
+
+    if (!categories || categories.length === 0) {
+        res.status(404);
+        throw new Error("No categories found for this type");
+    }
 
     res.json({
         success: true,
@@ -61,7 +60,6 @@ const getCategoriesByType = asyncHandler(async (req, res) => {
         categories
     });
 });
-
 // @desc    Get single category by ID
 // @route   GET /api/categories/:id
 // @access  Public
@@ -130,6 +128,11 @@ const createCategory = asyncHandler(async (req, res) => {
 const updateCategory = asyncHandler(async (req, res) => {
     const { name, image, categoryType } = req.body;
     // Validate category type if provided
+    const category = await Category.findById(req.params.id);
+    if (category) {
+        category.name = name || category.name;
+        category.categoryType = categoryType || category.categoryType
+    }
     if (categoryType) {
         const validCategoryTypes = ["Featured", "Hot Categories", "Top Categories"];
         if (!validCategoryTypes.includes(categoryType)) {
@@ -139,12 +142,8 @@ const updateCategory = asyncHandler(async (req, res) => {
         category.categoryType = categoryType;
     }
 
-    const category = await Category.findById(req.params.id);
-if (category) {
-    category.name = name || category.name ;
-    category.categoryType = categoryType || category.categoryType
-}
-    else{
+
+    else {
         res.status(404);
         throw new Error("Category not found");
     }
@@ -204,26 +203,23 @@ if (category) {
 const deleteCategory = asyncHandler(async (req, res) => {
     const category = await Category.findById(req.params.id);
 
-    if (category) {
-        await category.deleteOne();
-        res.status(404);
-        throw new Error("Category removed");
-    } else {
+    if (!category) {
         res.status(404);
         throw new Error("Category not found");
     }
 
-    // Delete image from cloudinary if exists
+    // 1. Delete image from Cloudinary FIRST
     if (category.image) {
         const publicId = category.image.split('/').pop().split('.')[0];
         const fullPublicId = `admin-dashboard/categories/${publicId}`;
         try {
             await cloudinary.uploader.destroy(fullPublicId);
         } catch (error) {
-            console.log("Error deleting image:", error.message);
+            console.log("Cloudinary Delete Error:", error.message);
         }
     }
 
+    // 2. Then delete from DB
     await category.deleteOne();
 
     res.json({
