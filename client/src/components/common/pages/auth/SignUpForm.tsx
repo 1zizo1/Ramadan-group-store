@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DoorOpen, LoaderCircle, UserPlus } from "lucide-react";
+import { LoaderCircle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -32,9 +32,7 @@ const registerSchema = z
     confirmPassword: z.string().min(8, "Confirm password is required"),
     role: z.literal("user"),
     termsAccepted: z.literal(true, {
-      errorMap: () => ({
-        message: "You must agree to the Privacy Policy and Terms of Use",
-      }),
+      message: "You must agree to the Privacy Policy and Terms of Use",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {

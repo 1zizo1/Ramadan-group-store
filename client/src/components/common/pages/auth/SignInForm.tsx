@@ -34,9 +34,7 @@ const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   termsAccepted: z.literal(true, {
-    errorMap: () => ({
-      message: "You must accept the terms and privacy policy",
-    }),
+    message: "You must accept the terms and privacy policy",
   }),
 });
 

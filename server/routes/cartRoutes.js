@@ -7,9 +7,8 @@ import {
     removeItemFromCart,
     clearCart,
 } from "../controllers/cartController.js"
-import router from "./orderRoutes.js";
 
-const route = express.Router();
+const router = express.Router();
 
 // All cart routes are protected
 router.use(protect);

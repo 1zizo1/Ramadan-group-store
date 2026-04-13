@@ -36,7 +36,7 @@ const CartPageClient = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const router = useRouter();
-  const TAX_RATE = 0.08; // 8% tax rate
+  const TAX_RATE = 0.14; // 14% tax rate
 
   useEffect(() => {
     const initializeCart = async () => {
@@ -62,7 +62,7 @@ const CartPageClient = () => {
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     const shipping = subtotal > 100 ? 0 : 15; // Free shipping over $100
-    const tax = subtotal * TAX_RATE; // 8% tax
+    const tax = subtotal * TAX_RATE; // 14% tax
     return subtotal + shipping + tax;
   };
 
@@ -337,7 +337,7 @@ const CartPageClient = () => {
                             onClick={() =>
                               handleRemoveItem(cartItem.product._id)
                             }
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 h-auto text-xs"
+                            className="text-red-600 hover:text-red-600 hover:bg-red-50 px-2 py-1 h-auto  text-xs"
                           >
                             <Trash2 className="w-3 h-3 mr-1" />
                             Remove
@@ -553,7 +553,7 @@ const CartPageClient = () => {
             </AlertDialogCancel>
             <AlertDialogCancel
               onClick={confirmClearCart}
-              className="bg-babyshopRed/80 hover:bg-babyshopRed hoverEffect text-babyshopWhite hover:text-babyshopWhite"
+              className="bg-babyshopRed/80 hover:bg-babyshopRed hoverEffect text-red-500 hover:text-babyshopWhite"
             >
               Yes, Clear Cart
             </AlertDialogCancel>

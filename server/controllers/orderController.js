@@ -1,194 +1,294 @@
+import asyncHandler from "express-async-handler";
+import Order from "../models/orderModel.js";
 import Cart from "../models/cartModel.js";
-import Order from "../models/OrderModel.js"; // Use Capital 'Order'
 
-export const createOrderFromCart = async (req, res) => {
-    const { items, shippingAddress } = req.body;
+// @desc    Get all orders for a user
+// @route   GET /api/orders
+// @access  Private
+export const getOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ userId: req.user._id }).populate(
+    "items.productId"
+  );
+  res.json(orders);
+});
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "Cart Items are required" });
+// @desc    Get order by ID
+// @route   GET /api/orders/:id
+// @access  Private
+export const getOrderById = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id).populate("items.productId");
+
+  if (
+    order &&
+    (req.user.role === "admin" ||
+      order.userId.toString() === req.user._id.toString())
+  ) {
+    res.json(order);
+  } else {
+    res.status(404);
+    throw new Error("Order not found");
+  }
+});
+
+// @desc    Create order from cart
+// @route   POST /api/orders
+// @access  Private
+export const createOrderFromCart = asyncHandler(async (req, res) => {
+  const { items, shippingAddress } = req.body;
+// console.log("Request Body:", req.body); // 👈 Add this line
+  // Validate that items are provided
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    res.status(400);
+    throw new Error("Cart items are required to create an order");
+  }
+
+  // Validate shipping address
+  if (
+    !shippingAddress ||
+    !shippingAddress.street ||
+    !shippingAddress.city ||
+    !shippingAddress.country ||
+    !shippingAddress.postalCode
+  ) {
+    res.status(400);
+    throw new Error(
+      "Shipping address is required with all fields (street, city, country, postalCode)"
+    );
+  }
+
+  // Validate each item structure
+  const validItems = items.map((item) => {
+    if (!item._id || !item.name || !item.price || !item.quantity) {
+      res.status(400);
+      throw new Error("Invalid item structure");
     }
+    return {
+      productId: item._id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image,
+    };
+  });
 
-    if (!shippingAddress || !shippingAddress.street || !shippingAddress.city || !shippingAddress.country || !shippingAddress.postalCode) {
-        return res.status(400).json({ message: "Full shipping address is required" });
-    }
+  // Calculate total
+  const total = validItems.reduce((acc, item) => {
+    return acc + item.price * item.quantity;
+  }, 0);
 
-    const validItems = items.map((item) => ({
-        productId: item._id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-    }));
+  // Create order with "pending" status (will be updated to "paid" after successful payment)
+  const order = await Order.create({
+    userId: req.user._id,
+    items: validItems,
+    total,
+    status: "pending",
+    shippingAddress,
+  });
 
-    const total = validItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  res.status(201).json({
+    success: true,
+    order,
+    message: "Order created successfully",
+  });
+});
 
-    const newOrder = await Order.create({ // Renamed variable to avoid conflict with Model
-        userId: req.user._id, // Standard Mongoose uses _id
-        items: validItems,
-        total,
-        status: "pending",
-        shippingAddress,
+// @desc    Update order status
+// @route   PUT /api/orders/:id/status
+// @access  Private
+export const updateOrderStatus = asyncHandler(async (req, res) => {
+  if (!req.body) {
+    return res.status(400).json({
+      success: false,
+      message: "Request body is missing",
     });
+  }
 
-    res.status(201).json({ success: true, order: newOrder });
-};
+  const { status, paymentIntentId, stripeSessionId } = req.body;
 
-export const getAllOrdersAdmin = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const perPage = parseInt(req.query.limit) || 10; // Fixed typo: was using .page
-        const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
-        
-        const filter = {};
-        if (req.query.status && req.query.status !== "all") filter.status = req.query.status;
+  // Validate status
+  const validStatuses = ["pending", "paid", "completed", "cancelled"];
+  if (!status || !validStatuses.includes(status)) {
+    res.status(400);
+    throw new Error(
+      "Invalid status. Must be one of: pending, paid, completed, cancelled"
+    );
+  }
 
-        const skip = (page - 1) * perPage;
+  const order = await Order.findById(req.params.id);
 
-        const orders = await Order.find(filter)
-            .populate('userId', 'name email phone')
-            .populate("items.productId", "name price image") // Fixed 'item' to 'items'
-            .sort({ createdAt: sortOrder })
-            .skip(skip)
-            .limit(perPage);
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
 
-        const total = await Order.countDocuments(filter);
+  // Check authorization based on order status and user role
+  // - Users can only update their own orders when status is "pending"
+  // - Admins can update any order at any time
+  // - Webhook calls (no req.user) are always allowed
+  if (req.user) {
+    const isOwner = order.userId.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+    const isPending = order.status === "pending";
 
-        // Map through 'orders' (the result array), NOT 'order' (the model)
-        const transformedOrders = orders.map((order) => ({
-            _id: order._id,
-            orderId: `ORD-${order._id.toString().slice(-6).toUpperCase()}`,
-            user: order.userId || { name: 'Deleted User' },
-            items: order.items,
-            shippingAddress: order.shippingAddress,
-            totalAmount: order.total,
-            status: order.status,
-            createdAt: order.createdAt
-        }));
-
-        res.status(200).json({
-            orders: transformedOrders,
-            total,
-            totalPages: Math.ceil(total / perPage),
-            currentPage: page,
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    // If user is not admin and (not owner OR order is not pending), deny access
+    if (!isAdmin && (!isOwner || !isPending)) {
+      res.status(403);
+      throw new Error(
+        isPending
+          ? "Not authorized to update this order"
+          : "Order status can only be updated by admin after payment"
+      );
     }
-};
+  }
 
-export const updateOrderStatus = async (req, res) => {
-    try {
-        const { status } = req.body;
-        
-        // 1. Check if order exists
-        const order = await Order.findById(req.params.id); // Fixed req.param
-        if (!order) return res.status(404).json({ message: "Order not found" });
+  // Prepare update object
+  const updateData = {
+    status,
+    updatedAt: new Date(),
+  };
 
-        // 2. USE UPDATE, NOT DELETE
-        order.status = status;
-        
-        // Add to history (Ramadan Group needs this for tracking logistics!)
-        order.statusHistory.push({
-            status,
-            updatedBy: req.user._id,
-            updatedAt: new Date()
-        });
-
-        await order.save();
-
-        res.status(200).json({ success: true, data: order });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+  // If marking as paid, store payment information and timestamp
+  if (status === "paid") {
+    if (paymentIntentId) {
+      updateData.paymentIntentId = paymentIntentId;
     }
-};
-
-export const deleteOrder = async (req, res) => {
-    try {
-        const order = await Order.findById(req.params.id);
-
-        if (!order) return res.status(404).json({ message: "Order not found" });
-
-        // Security: Only Admin or owner can delete, and ONLY if pending
-        if (req.user.role !== "admin") {
-            return res.status(403).json({ message: "Not authorized" });
-        }
-
-        if (order.status !== 'pending' && req.user.role !== "admin") {
-            return res.status(400).json({ message: "Cannot delete active orders" });
-        }
-
-        await Order.findByIdAndDelete(req.params.id);
-        res.status(200).json({ success: true, message: "Order removed" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    if (stripeSessionId) {
+      updateData.stripeSessionId = stripeSessionId;
     }
-};
-export const getOrders = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        
-        const orders = await Order.find({ user: userId })
-            .sort({ createdAt: -1 });
+    updateData.paidAt = new Date();
+  }
 
-        res.status(200).json({
-            success: true,
-            count: orders.length,
-            data: orders
-        });
-
-    } catch (error) {
-        console.error("Get orders error:", error);
-        res.status(500).json({
-            success: false,
-            message: error.message || "Server error"
-        });
+  // Use findByIdAndUpdate to avoid full document validation
+  const updatedOrder = await Order.findByIdAndUpdate(
+    req.params.id,
+    updateData,
+    {
+      new: true,
+      runValidators: false, // Disable validation to avoid shipping address issues
     }
-};
+  );
 
-export const getOrderById = async (req, res) => {
-    try {
-        const order = await Order.findById(req.params.id)
-            .populate('user', 'name email')
-            .populate('items.product', 'name image');
+  res.json({
+    success: true,
+    order: updatedOrder,
+    message: `Order status updated to ${status}`,
+  });
+});
 
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: "Order not found"
-            });
-        }
+// @desc    Delete order
+// @route   DELETE /api/orders/:id
+// @access  Private
+export const deleteOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
 
-        if (order.user._id.toString() !== req.user._id.toString() && !req.user.isAdmin) {
-            return res.status(403).json({
-                success: false,
-                message: "Not authorized to view this order"
-            });
-        }
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
 
-        res.status(200).json({
-            success: true,
-            data: order
-        });
+  // Check if user owns this order or is an admin
+  if (
+    req.user.role !== "admin"
+    // && order.userId.toString() !== req.user._id.toString()
+  ) {
+    res.status(403);
+    throw new Error("Not authorized to delete this order");
+  }
 
-    } catch (error) {
-        console.error("Get order by ID error:", error);
-        if (error.kind === 'ObjectId') {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid order ID format"
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: error.message || "Server error"
-        });
+  // Only allow deletion if order is still pending
+  // if (order.status !== "pending") {
+  //   res.status(400);
+  //   throw new Error("Cannot delete order that has been processed");
+  // }
+
+  await Order.findByIdAndDelete(req.params.id);
+
+  res.json({
+    success: true,
+    message: "Order deleted successfully",
+  });
+});
+
+// @desc    Get all orders for admin
+// @route   GET /api/orders/admin
+// @access  Private/Admin
+export const getAllOrdersAdmin = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const perPage = parseInt(req.query.perPage) || 10;
+  const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
+  const status = req.query.status;
+  const paymentStatus = req.query.paymentStatus;
+
+  // Build filter object
+  const filter = {};
+  if (status && status !== "all") {
+    filter.status = status;
+  }
+  if (paymentStatus && paymentStatus !== "all") {
+    // Map payment status to actual status values
+    if (paymentStatus === "paid") {
+      filter.status = { $in: ["paid", "completed"] };
+    } else if (paymentStatus === "pending") {
+      filter.status = "pending";
+    } else if (paymentStatus === "failed") {
+      filter.status = "cancelled";
     }
-};
-export default {
-    createOrderFromCart,
-    getOrders,
-    getOrderById,
-    getAllOrdersAdmin,
-    updateOrderStatus,
-    deleteOrder
-};
+  }
+
+  const skip = (page - 1) * perPage;
+
+  const orders = await Order.find(filter)
+    .populate("userId", "name email")
+    .populate("items.productId", "name price image")
+    .sort({ createdAt: sortOrder })
+    .skip(skip)
+    .limit(perPage);
+
+  const total = await Order.countDocuments(filter);
+  const totalPages = Math.ceil(total / perPage);
+
+  // Transform data to match frontend expectations
+  const transformedOrders = orders.map((order) => ({
+    _id: order._id,
+    orderId: `ORD-${order._id.toString().slice(-6).toUpperCase()}`,
+    user: {
+      _id: order.userId._id,
+      name: order.userId.name,
+      email: order.userId.email,
+    },
+    items: order.items.map((item) => ({
+      product: {
+        _id: item.productId._id,
+        name: item.productId.name,
+        price: item.productId.price,
+        image: item.productId.image,
+      },
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    totalAmount: order.total,
+    status: order.status,
+    paymentStatus:
+      order.status === "paid" || order.status === "completed"
+        ? "paid"
+        : order.status === "cancelled"
+        ? "failed"
+        : "pending",
+    shippingAddress: order.shippingAddress || {
+      street: "N/A",
+      city: "N/A",
+      state: "N/A",
+      zipCode: "N/A",
+      country: "N/A",
+    },
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+  }));
+
+  res.json({
+    orders: transformedOrders,
+    total,
+    totalPages,
+    currentPage: page,
+  });
+});

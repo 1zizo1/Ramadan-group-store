@@ -1,78 +1,77 @@
 import mongoose from "mongoose";
 
-const orderItemSchema = mongoose.Schema({
-    productId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-        required: true,
-    },
-    name: {
-        type: String,
-        required: true,
-    },
-    price: {
-        type: Number,
-        required: true,
-    },
-    quantity: {
-        type: Number,
-        required: true,
-        min: 1,
-    },
-    image: {
-        type: String,
-    },
+const orderItemSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+  image: {
+    type: String,
+  },
 });
 
-const orderSchema = mongoose.Schema({
+const orderSchema = new mongoose.Schema(
+  {
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     items: [orderItemSchema],
     total: {
-            type: Number,
-            default: 0,
-        },
-        status: {
-            type: String,
-            enum: ["pending", "processing", "paid", "completed", "cancelled"],
-            default: "pending",
-        },
-        shippingAddress: {
-            street: {
-                type: String,
-                required: true,
-            },
-            city: {
-                type: String,
-                required: true,
-            },
-            country: {
-                type: String,
-                required: true,
-            },
-            postalCode: {
-                type: String,
-                required: true,
-            },
-        },
-        paymentIntentId: {
-            type: String,
-        },
-        stripeSessionId: {
-            type: String,
-        },
-        paidAt: {
-            type: Date,
-        },
+      type: Number,
+      default: 0,
     },
-    { timestamps: true }
+    status: {
+      type: String,
+      enum: ["pending", "paid", "completed", "cancelled"],
+      default: "pending",
+    },
+    shippingAddress: {
+      street: {
+        type: String,
+        required: true,
+      },
+      city: {
+        type: String,
+        required: true,
+      },
+      country: {
+        type: String,
+        required: true,
+      },
+      postalCode: {
+        type: String,
+        required: true,
+      },
+    },
+    paymentIntentId: {
+      type: String,
+    },
+    stripeSessionId: {
+      type: String,
+    },
+    paidAt: {
+      type: Date,
+    },
+  },
+  { timestamps: true }
 );
 
+const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
 
-
-const order = mongoose.model("Order", orderSchema);
-
-export default order;
+export default Order;
