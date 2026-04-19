@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useDropzone } from "react-dropzone";
-import { Card, CardContent } from "./card";
 import { Upload, X } from "lucide-react";
-import { Button } from "./button";
 
 interface ImageUploadProps {
   value: string;
@@ -10,7 +10,7 @@ interface ImageUploadProps {
   disabled?: boolean;
 }
 
-const ImageUpload = ({ value, onChange, disabled }: ImageUploadProps) => {
+export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ const ImageUpload = ({ value, onChange, disabled }: ImageUploadProps) => {
     accept: {
       "image/*": [".jpeg", ".jpg", ".png", ".webp"],
     },
-    maxSize: 10000000, // 10MB
+    maxSize: 4000000, // 4MB
     maxFiles: 1,
     disabled,
     onDrop: async (acceptedFiles) => {
@@ -65,7 +65,7 @@ const ImageUpload = ({ value, onChange, disabled }: ImageUploadProps) => {
         >
           <input {...getInputProps()} />
           {preview ? (
-            <div className="w-full relative">
+            <div className="relative w-full">
               <img
                 src={preview}
                 alt="Preview"
@@ -89,7 +89,7 @@ const ImageUpload = ({ value, onChange, disabled }: ImageUploadProps) => {
                 Drag &amp; drop or click to upload
               </p>
               <p className="text-xs text-muted-foreground/70">
-                Image (max 10MB)
+                Image (max 4MB)
               </p>
             </div>
           )}
@@ -97,6 +97,4 @@ const ImageUpload = ({ value, onChange, disabled }: ImageUploadProps) => {
       </CardContent>
     </Card>
   );
-};
-
-export default ImageUpload;
+}
