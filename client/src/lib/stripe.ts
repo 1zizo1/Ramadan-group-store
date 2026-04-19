@@ -10,7 +10,7 @@ export const stripePromise = loadStripe(stripePublishableKey);
 
 export interface StripeCheckoutItem {
   name: string;
-  description: string;
+  description?: string;
   amount: number; // in cents
   currency: string;
   quantity: number;
@@ -51,12 +51,18 @@ export const createCheckoutSession = async (
 };
 
 // Redirect to Stripe Checkout
-// Modern approach: use the session URL directly from your backend
-export const redirectToCheckout = async (checkoutUrl: string) => {
-  if (!checkoutUrl) {
-    throw new Error("Checkout URL is required");
+export const redirectToCheckout = async (sessionId: string) => {
+  const stripe = await stripePromise;
+
+  if (!stripe) {
+    throw new Error("Stripe failed to load");
   }
 
-  // Redirect to the Stripe Checkout page
-  window.location.href = checkoutUrl;
+  const response = await stripe.checkout.sessions.retrieve(sessionId);
+  
+  if (response && response.url) {
+    window.location.href = response.url;
+  } else {
+    throw new Error("Failed to retrieve checkout session URL");
+  }
 };

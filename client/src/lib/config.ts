@@ -1,3 +1,8 @@
+/**
+ * Configuration utility for API endpoints
+ * Handles both development and production environments
+ */
+
 interface ApiConfig {
   baseUrl: string;
   isProduction: boolean;
@@ -63,8 +68,6 @@ export async function fetchWithConfig<T>(
     const response = await fetch(url, mergedOptions);
 
     if (!response.ok) {
-      console.log(response);
-      
       throw new Error(
         `API Error: ${response.status} ${response.statusText} - ${endpoint}`
       );

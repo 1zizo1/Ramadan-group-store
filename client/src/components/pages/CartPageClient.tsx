@@ -1,27 +1,28 @@
 "use client";
+import React, { useState, useEffect } from "react";
 import { useCartStore, useUserStore } from "@/lib/store";
-import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import { toast } from "sonner";
-import Container from "../common/Container";
-import { Skeleton } from "../ui/skeleton";
-import CartSkeleton from "../skeleton/CartSkeleton";
-import { ArrowLeft, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
-import Link from "next/link";
-import { Button } from "../ui/button";
-import PageBreadcrumb from "../common/PageBreadcrumb";
-import Image from "next/image";
-import PriceFormatter from "../common/PriceFormatter";
-import { Separator } from "../ui/separator";
+import Container from "@/components/common/Container";
+import PageBreadcrumb from "@/components/common/PageBreadcrumb";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-} from "../ui/alert-dialog";
-import { AlertDialogTitle } from "@radix-ui/react-alert-dialog";
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import PriceFormatter from "@/components/common/PriceFormatter";
+import { Minus, Plus, Trash2, ShoppingCart, ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const CartPageClient = () => {
   const {
@@ -36,7 +37,6 @@ const CartPageClient = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const router = useRouter();
-  const TAX_RATE = 0.14; // 14% tax rate
 
   useEffect(() => {
     const initializeCart = async () => {
@@ -44,11 +44,12 @@ const CartPageClient = () => {
         try {
           await syncCartFromServer();
         } catch (error) {
-          console.error("Failed to sync cart from server:", error);
+          console.error("Failed to sync cart:", error);
         }
       }
       setIsLoading(false);
     };
+
     initializeCart();
   }, [auth_token, syncCartFromServer]);
 
@@ -62,18 +63,8 @@ const CartPageClient = () => {
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     const shipping = subtotal > 100 ? 0 : 15; // Free shipping over $100
-    const tax = subtotal * TAX_RATE; // 14% tax
+    const tax = subtotal * 0.08; // 8% tax
     return subtotal + shipping + tax;
-  };
-
-  const handleRemoveItem = async (itemId: string) => {
-    try {
-      await removeFromCart(itemId);
-      toast.success("Item removed from cart");
-    } catch (error) {
-      console.error("Failed to remove item:", error);
-      toast.error("Failed to remove item from cart");
-    }
   };
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
@@ -90,12 +81,21 @@ const CartPageClient = () => {
     }
   };
 
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      await removeFromCart(itemId);
+      toast.success("Item removed from cart");
+    } catch (error) {
+      console.error("Failed to remove item:", error);
+      toast.error("Failed to remove item from cart");
+    }
+  };
+
   const handleClearCart = () => {
     setShowClearDialog(true);
   };
 
   const confirmClearCart = async () => {
-    setIsLoading(true);
     try {
       await clearCart();
       setShowClearDialog(false);
@@ -103,8 +103,6 @@ const CartPageClient = () => {
     } catch (error) {
       console.error("Failed to clear cart:", error);
       toast.error("Failed to clear cart");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -128,8 +126,151 @@ const CartPageClient = () => {
     }
   };
 
+  // Show loading screen
   if (isLoading) {
-    return <CartSkeleton />;
+    return (
+      <Container className="py-8">
+        {/* Breadcrumb Skeleton */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4" />
+              <span>/</span>
+              <Skeleton className="h-4 w-8" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-3 w-8" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Title Skeleton */}
+        <div className="mb-8">
+          <Skeleton className="h-10 w-24 mb-2" />
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 lg:gap-8">
+          {/* Cart Items Section Skeleton */}
+          <div className="xl:col-span-3">
+            <div className="bg-babyshopWhite rounded-2xl border border-gray-100 shadow-sm p-6">
+              {/* Table Header Skeleton - Desktop */}
+              <div className="hidden lg:grid grid-cols-12 gap-4 py-4 border-b border-gray-200 mb-6">
+                <div className="col-span-6">
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <div className="col-span-2 text-center">
+                  <Skeleton className="h-4 w-12 mx-auto" />
+                </div>
+                <div className="col-span-2 text-center">
+                  <Skeleton className="h-4 w-16 mx-auto" />
+                </div>
+                <div className="col-span-2 text-center">
+                  <Skeleton className="h-4 w-16 mx-auto" />
+                </div>
+              </div>
+
+              {/* Cart Items Skeleton */}
+              <div className="space-y-4">
+                {[1, 2, 3].map((index) => (
+                  <div
+                    key={index}
+                    className="border border-gray-100 rounded-lg p-4 lg:p-0 lg:border-0 lg:rounded-none"
+                  >
+                    {/* Mobile Layout Skeleton */}
+                    <div className="block lg:hidden">
+                      <div className="flex items-start gap-4">
+                        <Skeleton className="w-20 h-20 rounded-lg" />
+                        <div className="flex-1 space-y-3">
+                          <Skeleton className="h-4 w-full" />
+                          <div className="flex justify-between items-center">
+                            <div className="space-y-1">
+                              <Skeleton className="h-3 w-8" />
+                              <Skeleton className="h-4 w-12" />
+                            </div>
+                            <Skeleton className="h-8 w-24" />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="space-y-1">
+                              <Skeleton className="h-3 w-12" />
+                              <Skeleton className="h-4 w-16" />
+                            </div>
+                            <Skeleton className="h-6 w-16" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Desktop Layout Skeleton */}
+                    <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center py-6 border-b border-gray-100">
+                      <div className="lg:col-span-6 flex items-center gap-4">
+                        <Skeleton className="w-20 h-20 rounded-lg" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-5 w-3/4" />
+                          <Skeleton className="h-4 w-16" />
+                        </div>
+                      </div>
+                      <div className="lg:col-span-2 text-center">
+                        <Skeleton className="h-5 w-16 mx-auto" />
+                      </div>
+                      <div className="lg:col-span-2 flex justify-center">
+                        <Skeleton className="h-10 w-32" />
+                      </div>
+                      <div className="lg:col-span-2 text-center">
+                        <Skeleton className="h-5 w-20 mx-auto" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cart Actions Skeleton */}
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-6 border-t border-gray-200">
+                <Skeleton className="h-12 w-full sm:w-48" />
+                <Skeleton className="h-12 w-full sm:w-32" />
+              </div>
+            </div>
+          </div>
+
+          {/* Cart Totals Skeleton */}
+          <div className="xl:col-span-1">
+            <div className="bg-babyshopWhite rounded-2xl p-6 sticky top-4 border border-gray-100 shadow-sm">
+              <Skeleton className="h-6 w-24 mb-6" />
+
+              <div className="space-y-4">
+                {[1, 2, 3].map((index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center py-2"
+                  >
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))}
+
+                <div className="my-4">
+                  <Skeleton className="h-px w-full" />
+                </div>
+
+                <div className="flex justify-between items-center py-2">
+                  <Skeleton className="h-5 w-10" />
+                  <Skeleton className="h-6 w-16" />
+                </div>
+              </div>
+
+              <Skeleton className="h-12 w-full mt-6" />
+
+              <div className="mt-4 text-center">
+                <Skeleton className="h-3 w-32 mx-auto" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Container>
+    );
   }
 
   if (cartItemsWithQuantities.length === 0) {
@@ -200,7 +341,7 @@ const CartPageClient = () => {
 
   return (
     <Container className="py-8">
-      {/* breadcrumb */}
+      {/* Breadcrumb */}
       <PageBreadcrumb
         items={[]}
         currentPage="Cart"
@@ -213,12 +354,14 @@ const CartPageClient = () => {
           url: typeof window !== "undefined" ? window.location.href : "",
         }}
       />
+
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-babyshopBlack mb-2">Cart</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Cart</h1>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
-        {/* Cart items section */}
-        <div className="lg:col-span-3">
+
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 lg:gap-8">
+        {/* Cart Items Section */}
+        <div className="xl:col-span-3">
           <div className="bg-babyshopWhite rounded-2xl border border-gray-100 shadow-sm p-6">
             {/* Cart Table Header - Only visible on larger screens */}
             <div className="hidden lg:grid grid-cols-12 gap-4 py-4 border-b border-gray-200 mb-6">
@@ -235,14 +378,15 @@ const CartPageClient = () => {
                 Subtotal
               </div>
             </div>
-            {/* Cart items */}
+
+            {/* Cart Items */}
             <div className="space-y-4">
-              {cartItemsWithQuantities?.map((cartItem) => (
+              {cartItemsWithQuantities.map((cartItem) => (
                 <div
-                  key={cartItem?.product?._id}
+                  key={cartItem.product._id}
                   className="border border-gray-100 rounded-lg p-4 lg:p-0 lg:border-0 lg:rounded-none"
                 >
-                  {/* Mobile layout */}
+                  {/* Mobile Layout */}
                   <div className="block lg:hidden">
                     <div className="flex items-start gap-4">
                       {/* Product Image */}
@@ -337,7 +481,7 @@ const CartPageClient = () => {
                             onClick={() =>
                               handleRemoveItem(cartItem.product._id)
                             }
-                            className="text-red-600 hover:text-red-600 hover:bg-red-50 px-2 py-1 h-auto  text-xs"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 h-auto text-xs"
                           >
                             <Trash2 className="w-3 h-3 mr-1" />
                             Remove
@@ -346,13 +490,14 @@ const CartPageClient = () => {
                       </div>
                     </div>
                   </div>
-                  {/* Desktop layout */}
+
+                  {/* Desktop Layout */}
                   <div className="hidden lg:grid lg:grid-cols-12 gap-4 items-center py-6 border-b border-gray-100">
-                    {/* product info */}
+                    {/* Product Info */}
                     <div className="lg:col-span-6 flex items-center gap-4">
                       <Link href={`/product/${cartItem.product._id}`}>
-                        <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 hover:scale-105 hoverEffect">
-                          {cartItem?.product?.image ? (
+                        <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 hover:scale-105 transition-transform duration-200 cursor-pointer">
+                          {cartItem.product.image ? (
                             <Image
                               src={cartItem.product.image}
                               alt={cartItem.product.name}
@@ -366,43 +511,46 @@ const CartPageClient = () => {
                           )}
                         </div>
                       </Link>
-                      <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
                         <Link href={`/product/${cartItem.product._id}`}>
-                          <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 hover:text-babyshopSky hoverEffect">
-                            {cartItem?.product.name}
+                          <h3 className="font-medium text-gray-900 mb-1 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer">
+                            {cartItem.product.name}
                           </h3>
                         </Link>
-                        {/* Remove button */}
-
-                        <Button
-                          variant={"ghost"}
-                          size={"sm"}
-                          onClick={() =>
-                            handleRemoveItem(cartItem?.product?._id)
-                          }
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1 h-auto text-xs hoverEffect"
-                        >
-                          <Trash2 className="w-3 h-3 mr-1" /> Remove
-                        </Button>
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleRemoveItem(cartItem.product._id)
+                            }
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 p-0 h-auto text-xs"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    {/* price */}
+
+                    {/* Price */}
                     <div className="lg:col-span-2 text-center">
                       <PriceFormatter
-                        amount={cartItem?.product?.price}
+                        amount={cartItem.product.price}
                         className="text-base font-medium text-gray-900"
                       />
                     </div>
-                    {/* quantity */}
+
+                    {/* Quantity */}
                     <div className="lg:col-span-2 flex justify-center">
                       <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
                         <Button
-                          variant={"ghost"}
-                          size={"sm"}
+                          variant="ghost"
+                          size="sm"
                           onClick={() =>
                             handleQuantityChange(
-                              cartItem?.product?._id,
-                              cartItem?.quantity - 1
+                              cartItem.product._id,
+                              cartItem.quantity - 1
                             )
                           }
                           className="h-10 w-10 p-0 hover:bg-gray-50 border-0 rounded-none"
@@ -413,12 +561,12 @@ const CartPageClient = () => {
                           {cartItem.quantity}
                         </div>
                         <Button
-                          variant={"ghost"}
-                          size={"sm"}
+                          variant="ghost"
+                          size="sm"
                           onClick={() =>
                             handleQuantityChange(
-                              cartItem?.product?._id,
-                              cartItem?.quantity + 1
+                              cartItem.product._id,
+                              cartItem.quantity + 1
                             )
                           }
                           className="h-10 w-10 p-0 hover:bg-gray-50 border-0 rounded-none"
@@ -427,6 +575,7 @@ const CartPageClient = () => {
                         </Button>
                       </div>
                     </div>
+
                     {/* Subtotal */}
                     <div className="lg:col-span-2 text-center">
                       <PriceFormatter
@@ -438,20 +587,22 @@ const CartPageClient = () => {
                 </div>
               ))}
             </div>
-            {/* Cart actions */}
+
+            {/* Cart Actions */}
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-8 pt-6 border-t border-gray-200">
-              <Link href={"/shop"}>
+              <Link href="/shop" className="flex-1 sm:flex-initial">
                 <Button
-                  variant={"outline"}
-                  size={"lg"}
+                  variant="outline"
+                  size="lg"
                   className="w-full sm:w-auto rounded-full px-8"
                 >
-                  <ArrowLeft /> Continue Shopping
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Continue Shopping
                 </Button>
               </Link>
               <Button
-                variant={"outline"}
-                size={"lg"}
+                variant="outline"
+                size="lg"
                 onClick={handleClearCart}
                 className="w-full sm:w-auto rounded-full px-8 text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
               >
@@ -460,77 +611,90 @@ const CartPageClient = () => {
             </div>
           </div>
         </div>
-        {/* Cart totals */}
-        <div className="lg:col-span-1 bg-babyshopWhite rounded-2xl border border-gray-100 shadow-sm p-6 h-fit">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Cart Totals</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-2">
-              <span className="text-gray-600">Subtotal</span>
-              <PriceFormatter
-                amount={calculateSubtotal()}
-                className="text-base font-medium text-gray-900"
-              />
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-600">Shipping</span>
-              <span className="text-base font-medium">
-                {calculateSubtotal() > 100 ? (
-                  <span className="text-green-600">Free shipping</span>
-                ) : (
-                  <PriceFormatter
-                    amount={15}
-                    className="text-base font-medium text-gray-900"
-                  />
-                )}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-600">Tax</span>
-              <PriceFormatter
-                amount={calculateSubtotal() * TAX_RATE}
-                className="text-base font-medium text-gray-900"
-              />
+
+        {/* Cart Totals */}
+        <div className="xl:col-span-1">
+          <div className="bg-babyshopWhite rounded-2xl p-6 sticky top-4 border border-gray-100 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              Cart totals
+            </h2>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-gray-600">Subtotal</span>
+                <PriceFormatter
+                  amount={calculateSubtotal()}
+                  className="text-base font-medium text-gray-900"
+                />
+              </div>
+
+              <div className="flex justify-between items-center py-2">
+                <span className="text-gray-600">Shipping</span>
+                <span className="text-base font-medium">
+                  {calculateSubtotal() > 100 ? (
+                    <span className="text-green-600">Free shipping</span>
+                  ) : (
+                    <PriceFormatter
+                      amount={15}
+                      className="text-base font-medium text-gray-900"
+                    />
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-2">
+                <span className="text-gray-600">Tax</span>
+                <PriceFormatter
+                  amount={calculateSubtotal() * 0.08}
+                  className="text-base font-medium text-gray-900"
+                />
+              </div>
+
+              {calculateSubtotal() > 100 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-green-700 text-sm font-medium">
+                    🎉 You qualify for free shipping!
+                  </p>
+                </div>
+              )}
+
+              <Separator className="my-4" />
+
+              <div className="flex justify-between items-center py-2">
+                <span className="text-lg font-bold text-gray-900">Total</span>
+                <PriceFormatter
+                  amount={calculateTotal()}
+                  className="text-xl font-bold text-gray-900"
+                />
+              </div>
             </div>
 
-            {calculateSubtotal() > 100 && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-green-700 text-sm font-medium">
-                  🎉 You qualify for free shipping!
-                </p>
-              </div>
-            )}
-            <Separator className="my-4" />
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-600">Total Amount</span>
-              <PriceFormatter
-                amount={calculateTotal()}
-                className="text-base font-medium text-gray-900"
-              />
+            <Button
+              size="lg"
+              onClick={handleCheckout}
+              disabled={isCheckingOut || cartItemsWithQuantities.length === 0}
+              className="w-full mt-6 bg-black hover:bg-gray-800 text-white rounded-full py-3 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isCheckingOut ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Creating Order...
+                </>
+              ) : (
+                "Proceed to checkout"
+              )}
+            </Button>
+
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500">
+                Secure checkout • SSL encrypted
+              </p>
             </div>
-          </div>
-          <Button
-            size={"lg"}
-            onClick={handleCheckout}
-            disabled={isCheckingOut || cartItemsWithQuantities?.length === 0}
-            className="w-full mt-6 bg-babyshopBlack hover:bg-gray-800 text-babyshopWhite rounded-full py-3 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isCheckingOut ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Creating Order...
-              </>
-            ) : (
-              "Proceed to Checkout"
-            )}
-          </Button>
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
-              Secure checkout • SSL encrypted
-            </p>
           </div>
         </div>
       </div>
-      {/* Clear cart confirmation modal */}
+
+      {/* Clear Cart Confirmation Modal */}
       <AlertDialog
         open={showClearDialog}
         onOpenChange={(open) => {
@@ -551,12 +715,12 @@ const CartPageClient = () => {
             <AlertDialogCancel onClick={() => setShowClearDialog(false)}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogCancel
+            <AlertDialogAction
               onClick={confirmClearCart}
-              className="bg-babyshopRed/80 hover:bg-babyshopRed hoverEffect text-red-500 hover:text-babyshopWhite"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Yes, Clear Cart
-            </AlertDialogCancel>
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

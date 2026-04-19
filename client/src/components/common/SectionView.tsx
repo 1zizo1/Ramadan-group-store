@@ -1,7 +1,7 @@
-import React from 'react'
-import { Title } from './text'
-import Link from 'next/link'
-import { ChevronRight } from 'lucide-react';
+import React from "react";
+import { Title } from "./text";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 interface Props {
   title: string;
@@ -9,9 +9,9 @@ interface Props {
   hrefTitle: string;
 }
 
-const SectionView = ({title, href, hrefTitle}:Props) => {
+const SectionView = ({ title, href, hrefTitle }: Props) => {
   return (
-      <div className="flex items-center gap-5 justify-between">
+    <div className="flex items-center gap-5 justify-between">
       <Title className="text-xl">{title}</Title>
       <Link
         href={href}
@@ -22,7 +22,7 @@ const SectionView = ({title, href, hrefTitle}:Props) => {
         </p>
       </Link>
     </div>
-  )
-}
+  );
+};
 
-export default SectionView
+export default SectionView;

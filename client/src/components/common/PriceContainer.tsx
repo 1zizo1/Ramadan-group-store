@@ -14,7 +14,7 @@ const PriceContainer = ({ price, discountPercentage }: Props) => {
         amount={price}
         className="text-babyshopTextLight line-through font-medium"
       />
-      <PriceFormatter amount={discountedPrice} />
+      <PriceFormatter amount={discountedPrice} className="text-babyshopRed" />
     </div>
   );
 };

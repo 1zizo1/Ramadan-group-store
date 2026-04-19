@@ -1,4 +1,5 @@
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const baseURL =
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000/api";
 
 export interface Address {
   _id: string;

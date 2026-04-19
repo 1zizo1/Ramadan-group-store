@@ -19,4 +19,4 @@ export function useOutsideClick<T extends HTMLElement>(callback: () => void) {
   return ref;
 }
 
-// export { useIsHydrated } from "./useHydration";
+export { useIsHydrated } from "./useHydration";

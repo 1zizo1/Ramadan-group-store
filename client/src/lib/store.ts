@@ -1,9 +1,9 @@
-import { Product } from "@/types/type";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { Order } from "./orderApi";
 import Cookies from "js-cookie";
 import authApi from "./authApi";
+import { Product } from "../types/type";
+import { Order } from "./orderApi";
 
 // Helper function to map server cart item to local format
 interface CartServerItem {
@@ -88,7 +88,6 @@ interface User {
 
 interface UserState {
   authUser: User | null;
-  authLoading: boolean;
   auth_token: string | null;
   isAuthenticated: boolean;
   updateUser: (user: User) => void;
@@ -142,20 +141,6 @@ interface WishlistState {
   isInWishlist: (productId: string) => boolean;
 }
 
-interface Currency {
-  code: string;
-  name: string;
-  symbol: string;
-  rate: number; // Exchange rate relative to USD
-}
-
-interface CurrencyState {
-  selectedCurrency: string;
-  currencies: Currency[];
-  setCurrency: (currencyCode: string) => void;
-  getCurrentCurrency: () => Currency;
-  convertPrice: (price: number) => number;
-}
 export const useUserStore = create<UserState>()(
   persist(
     (set, get) => ({
@@ -435,7 +420,7 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         try {
           const { clearCart } = await import("./cartApi");
-          const response = await clearCart();
+          const response = await clearCart(auth_token);
 
           if (response.success) {
             set({
@@ -481,7 +466,7 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         try {
           const { getUserCart } = await import("./cartApi");
-          const response = await getUserCart();
+          const response = await getUserCart(auth_token);
 
           if (response.success) {
             const cartItemsWithQuantities =
@@ -622,45 +607,3 @@ export const loadAllUserData = async (token: string) => {
     console.error("Error loading user data:", error);
   }
 };
-
-// Currency Store with 12 different currencies
-export const useCurrencyStore = create<CurrencyState>()(
-  persist(
-    (set, get) => ({
-      selectedCurrency: "USD",
-      currencies: [
-        { code: "USD", name: "US Dollar", symbol: "$", rate: 1.0 },
-        { code: "EUR", name: "Euro", symbol: "€", rate: 0.85 },
-        { code: "GBP", name: "British Pound", symbol: "£", rate: 0.73 },
-        { code: "JPY", name: "Japanese Yen", symbol: "¥", rate: 110.0 },
-        { code: "CAD", name: "Canadian Dollar", symbol: "C$", rate: 1.25 },
-        { code: "AUD", name: "Australian Dollar", symbol: "A$", rate: 1.35 },
-        { code: "CHF", name: "Swiss Franc", symbol: "CHF", rate: 0.92 },
-        { code: "CNY", name: "Chinese Yuan", symbol: "¥", rate: 6.45 },
-        { code: "INR", name: "Indian Rupee", symbol: "₹", rate: 74.5 },
-        { code: "BDT", name: "Bangladeshi Taka", symbol: "৳", rate: 84.8 },
-        { code: "KRW", name: "South Korean Won", symbol: "₩", rate: 1180.0 },
-        { code: "SGD", name: "Singapore Dollar", symbol: "S$", rate: 1.35 },
-      ],
-      setCurrency: (currencyCode: string) => {
-        set({ selectedCurrency: currencyCode });
-      },
-      getCurrentCurrency: () => {
-        const state = get();
-        return (
-          state.currencies.find((c) => c.code === state.selectedCurrency) ||
-          state.currencies[0]
-        );
-      },
-      convertPrice: (price: number) => {
-        const state = get();
-        const currency = state.getCurrentCurrency();
-        return price * currency.rate;
-      },
-    }),
-    {
-      name: "currency-storage",
-      storage: createJSONStorage(() => localStorage),
-    }
-  )
-);

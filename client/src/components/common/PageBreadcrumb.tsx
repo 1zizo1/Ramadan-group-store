@@ -1,8 +1,15 @@
-import { Facebook, Home, Instagram, LinkIcon, Twitter } from "lucide-react";
-import Link from "next/link";
+"use client";
 import React from "react";
+import Link from "next/link";
+import {
+  Home,
+  Facebook,
+  Instagram,
+  Twitter,
+  Link as LinkIcon,
+} from "lucide-react";
+import { Button } from "../../components/ui/button";
 import { toast } from "sonner";
-import { Button } from "../ui/button";
 
 interface BreadcrumbItem {
   label: string;
@@ -19,6 +26,7 @@ interface PageBreadcrumbProps {
     url: string;
   };
 }
+
 const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
   items,
   currentPage,
@@ -71,33 +79,39 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
       toast.error("Failed to share. Please try again.");
     }
   };
+
   return (
-    <div className="bg-babyshopWhite rounded-2xl border border-gray-100 shadow-sm p-4 mb-8">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-8">
       <div className="flex items-center justify-between">
+        {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Link href={"/"}>
+          {/* Home Icon */}
+          <Link href="/" className="hover:text-gray-700 transition-colors">
             <Home className="w-4 h-4" />
           </Link>
-          {/* Dynamic link */}
-          {items?.map((item, index) => (
+
+          {/* Dynamic Breadcrumb Items */}
+          {items.map((item, index) => (
             <React.Fragment key={index}>
               <span>/</span>
-              {item?.href ? (
+              {item.href ? (
                 <Link
-                  href={item?.href}
-                  className="hover:text-gray-700 hoverEffect"
+                  href={item.href}
+                  className="hover:text-gray-700 transition-colors"
                 >
-                  {item?.label}
+                  {item.label}
                 </Link>
               ) : (
-                <span>{item?.label}</span>
+                <span>{item.label}</span>
               )}
             </React.Fragment>
           ))}
-          {/* current page */}
+
+          {/* Current Page */}
           <span>/</span>
-          <span className="text-gray-700 font-medium">{currentPage}</span>
+          <span className="text-gray-900 font-medium">{currentPage}</span>
         </div>
+
         {/* Social Share Icons */}
         {showSocialShare && shareData && (
           <div className="flex items-center gap-2">

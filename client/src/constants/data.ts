@@ -4,7 +4,6 @@ const topHelpCenter = [
   { title: "Help Center", href: "/help" },
   { title: "Wishlist", href: "/user/wishlist" },
   { title: "Order Tracking", href: "/user/orders" },
-  { title: "Shop Now", href: "/shop" },
 ];
 
 const footerTopData = [

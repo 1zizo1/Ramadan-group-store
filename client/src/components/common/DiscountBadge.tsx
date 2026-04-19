@@ -1,9 +1,10 @@
-import { cn } from "@/lib/utils";
-import React from "react";
+import { cn } from "../../lib/utils";
+
 interface Props {
   discountPercentage: number;
   className?: string;
 }
+
 const DiscountBadge = ({ discountPercentage, className }: Props) => {
   return (
     <span
